@@ -1,17 +1,27 @@
 IN TIME — PANEL DE ADMINISTRACIÓN
 
-Este paquete añade /admin al catálogo modular. No se debe publicar sobre el catálogo actual hasta completar la configuración y probarlo en un deploy de prueba.
+Este paquete añade /admin al catálogo modular. Se mantiene en la rama de pruebas hasta completar la configuración y probarlo; no se debe fusionar en main antes de validar el panel.
 
 USUARIO FIJO: admin
 CONTRASEÑA: la eliges y configuras tú en Netlify; no la pongas en este archivo ni la envíes por chat.
 
-Variables que hay que crear en Netlify > Site configuration > Environment variables:
+Variables en Netlify > Site configuration > Environment variables:
 - ADMIN_PASSWORD: contraseña elegida por ti.
 - SESSION_SECRET: cadena aleatoria de al menos 32 caracteres.
-- GITHUB_TOKEN: token fine-grained de GitHub con permiso Contents: Read and write para el repositorio del catálogo.
-- GITHUB_REPO: Aluniaaaa1/catalogo-in-time..
-- GITHUB_BRANCH: main
+- GITHUB_TOKEN: token fine-grained de GitHub con permiso Contents: Read and write únicamente para el repositorio del catálogo.
+- GITHUB_REPO: `Aluniaaaa1/catalogo-in-time.` (el nombre del repositorio termina en un punto).
+- GITHUB_BRANCH: `main` (rama de producción).
 
-El panel usa una función de servidor para verificar la contraseña y mantener el token fuera del navegador. Los productos se guardan en products.js y las fotos en assets/uploads/. Netlify debe estar conectado al mismo repositorio y tener los despliegues automáticos activados.
+SEGURIDAD DE LAS PRUEBAS:
+- En contexto Production, la función lee y escribe en GITHUB_BRANCH (main).
+- En cualquier contexto de prueba de Netlify, la función lee y escribe en GITHUB_PREVIEW_BRANCH; si no se define, usa `instalar-panel-admin`.
+- Por tanto, el panel de la vista previa no debe modificar main. No hace falta cambiar GITHUB_BRANCH para probar.
+- No compartas ADMIN_PASSWORD, SESSION_SECRET ni GITHUB_TOKEN.
 
-IMPORTANTE: esta preparación aún no está publicada ni conectada. Antes de ponerla en producción hay que verificar que el products.js actual del repositorio corresponde a esta versión modular, configurar las variables anteriores y probar login, alta, edición, borrado y fotos en un deploy de prueba.
+El panel usa una función de servidor para verificar la contraseña y mantener el token fuera del navegador. Los productos se guardan en products.js y las fotos en assets/uploads/. Netlify debe estar conectado al repositorio y tener los despliegues automáticos activados.
+
+ESTADO:
+- La interfaz y la función están en la rama `instalar-panel-admin`.
+- El catálogo público de `main` no se ha modificado.
+- Antes de producción hay que abrir el deploy de prueba y verificar inicio de sesión, lectura de productos, alta, edición, borrado y carga de varias fotos.
+- Solo después de esas pruebas se debe fusionar la rama de pruebas en main.
