@@ -66,8 +66,8 @@ async function readProducts() {
   if (!file) throw new Error('No se encontró products.js en la rama ' + BRANCH + '.');
   const blob = await gh(`/git/blobs/${file.sha}`);
   if (!blob.content || blob.encoding !== 'base64') throw new Error('GitHub no devolvió el contenido de products.js.');
-  const source = Buffer.from(blob.content.replace(/\\s/g, ''), 'base64').toString('utf8');
-  const match = source.match(/window\\.IN_TIME_PRODUCTS\\s*=\\s*(\\[[\\s\\S]*\\])\\s*;?\\s*$/);
+  const source = Buffer.from(blob.content.replace(/\s/g, ''), 'base64').toString('utf8');
+  const match = source.match(/window\.IN_TIME_PRODUCTS\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
   if (!match) throw new Error('No se reconoce el formato de products.js.');
   return JSON.parse(match[1]);
 }
