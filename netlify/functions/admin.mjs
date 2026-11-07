@@ -57,11 +57,17 @@ async function currentHead() {
   return ref.object.sha;
 }
 async function readProducts() {
-  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/products.js`;
-  const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } });
-  if (!res.ok) throw new Error('No se pudo leer products.js desde GitHub.');
-  const source = await res.text();
-  const match = source.match(/window\.IN_TIME_PRODUCTS\s*=\s*(\[[\s\\S]*\])\s*;?\s*$/);
+  // El repositorio es privado: raw.githubusercontent.com no autentica esta lectura.
+  // Leer el blob mediante la API de GitHub con GITHUB_TOKEN.
+  const head = await currentHead();
+  const commit = await gh(`/git/commits/${head}`);
+  const tree = await gh(`/git/trees/${commit.tree.sha}?recursive=1`);
+  const file = (tree.tree || []).find(item => item.path === 'products.js' && item.type === 'blob');
+  if (!file) throw new Error('No se encontró products.js en la rama ' + BRANCH + '.');
+  const blob = await gh(`/git/blobs/${file.sha}`);
+  if (!blob.content || blob.encoding !== 'base64') throw new Error('GitHub no devolvió el contenido de products.js.');
+  const source = Buffer.from(blob.content.replace(/\\s/g, ''), 'base64').toString('utf8');
+  const match = source.match(/window\\.IN_TIME_PRODUCTS\\s*=\\s*(\\[[\\s\\S]*\\])\\s*;?\\s*$/);
   if (!match) throw new Error('No se reconoce el formato de products.js.');
   return JSON.parse(match[1]);
 }
