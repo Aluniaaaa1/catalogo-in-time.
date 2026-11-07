@@ -2,7 +2,9 @@ import crypto from 'node:crypto';
 
 const OWNER = (process.env.GITHUB_REPO || 'Aluniaaaa1/catalogo-in-time.').split('/')[0];
 const REPO = (process.env.GITHUB_REPO || 'Aluniaaaa1/catalogo-in-time.').split('/')[1];
-const BRANCH = process.env.GITHUB_BRANCH || 'main';
+const BRANCH = process.env.CONTEXT === 'production'
+  ? (process.env.GITHUB_BRANCH || 'main')
+  : (process.env.GITHUB_PREVIEW_BRANCH || 'instalar-panel-admin');
 const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
 const COOKIE = 'intime_admin';
 
