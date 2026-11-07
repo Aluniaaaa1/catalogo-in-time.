@@ -54,7 +54,7 @@ async function readProducts() {
   const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } });
   if (!res.ok) throw new Error('No se pudo leer products.js desde GitHub.');
   const source = await res.text();
-  const match = source.match(/window\\.IN_TIME_PRODUCTS\\s*=\\s*(\\[[\\s\\S]*\\])\\s*;?\\s*$/);
+  const match = source.match(/window\.IN_TIME_PRODUCTS\s*=\s*(\[[\s\\S]*\])\s*;?\s*$/);
   if (!match) throw new Error('No se reconoce el formato de products.js.');
   return JSON.parse(match[1]);
 }
@@ -71,7 +71,7 @@ async function commitFiles(files, message) {
   await gh(`/git/refs/heads/${encodeURIComponent(BRANCH)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sha: commit.sha, force: false }) });
   return commit.sha;
 }
-function productsSource(products) { return `window.IN_TIME_PRODUCTS = ${JSON.stringify(products)};\\n`; }
+function productsSource(products) { return `window.IN_TIME_PRODUCTS = ${JSON.stringify(products)};\n`; }
 
 export default async (request) => {
   const url = new URL(request.url);
@@ -101,7 +101,7 @@ export default async (request) => {
 
     if (method === 'POST' && path.endsWith('/image')) {
       const { filename, data, contentType } = body;
-      if (!filename || !data || !/^image\\/(jpeg|png|webp|gif)$/.test(contentType || ''))
+      if (!filename || !data || !/^image\/(jpeg|png|webp|gif)$/.test(contentType || ''))
         return reply(400, { error: 'Formato de imagen no válido.' });
       const safe = String(filename).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').slice(-80);
       const filePath = `assets/uploads/${Date.now()}-${safe}`;
