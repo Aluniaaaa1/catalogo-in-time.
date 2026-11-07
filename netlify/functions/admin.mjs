@@ -84,7 +84,7 @@ export default async (request) => {
   }
 
   // Diagnóstico temporal: nunca devuelve el valor del secreto, solo su presencia y longitud.
-  if (method === 'GET' && path.endsWith('/diagnostic')) {
+  if (method === 'GET' && (path.endsWith('/diagnostic') || url.searchParams.get('diagnostic') === '1')) {
     const secret = process.env.SESSION_SECRET || '';
     return reply(200, {
       context: process.env.CONTEXT || 'sin CONTEXT',
