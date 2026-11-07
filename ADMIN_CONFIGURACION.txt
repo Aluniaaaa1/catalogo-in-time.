@@ -9,7 +9,7 @@ Variables que hay que crear en Netlify > Site configuration > Environment variab
 - ADMIN_PASSWORD: contraseña elegida por ti.
 - SESSION_SECRET: cadena aleatoria de al menos 32 caracteres.
 - GITHUB_TOKEN: token fine-grained de GitHub con permiso Contents: Read and write para el repositorio del catálogo.
-- GITHUB_REPO: Aluniaaaa1/catalogo-in-time..
+- GITHUB_REPO: Aluniaaaa1/catalogo-in-time.
 - GITHUB_BRANCH: main
 
 El panel usa una función de servidor para verificar la contraseña y mantener el token fuera del navegador. Los productos se guardan en products.js y las fotos en assets/uploads/. Netlify debe estar conectado al mismo repositorio y tener los despliegues automáticos activados.
