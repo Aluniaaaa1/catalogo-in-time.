@@ -49,7 +49,7 @@ async function gh(path, options = {}) {
     headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(options.headers || {}) }
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || `GitHub respondió ${res.status}`);
+  if (!res.ok) { const error = new Error(data.message || `GitHub respondió ${res.status}`); error.status = res.status; error.endpoint = path; throw error; }
   return data;
 }
 async function currentHead() {
@@ -94,6 +94,25 @@ export default async (request) => {
   if (method !== 'GET' && method !== 'HEAD') {
     try { body = await request.json(); }
     catch { return reply(400, { error: 'Solicitud JSON no válida.' }); }
+  }
+
+  // Diagnóstico temporal de acceso al repositorio: nunca devuelve credenciales ni contenido privado.
+  if (method === 'GET' && url.searchParams.get('githubcheck') === '1') {
+    const result = { branch: BRANCH, tokenPresent: Boolean(process.env.GITHUB_TOKEN) };
+    try {
+      const ref = await gh(`/git/ref/heads/${encodeURIComponent(BRANCH)}`);
+      result.branchAccess = true;
+      result.head = ref.object?.sha || null;
+      const commit = await gh(`/git/commits/${ref.object.sha}`);
+      const tree = await gh(`/git/trees/${commit.tree.sha}?recursive=1`);
+      result.productsFileFound = (tree.tree || []).some(item => item.path === 'products.js' && item.type === 'blob');
+    } catch (error) {
+      result.branchAccess = false;
+      result.githubStatus = error.status || null;
+      result.githubMessage = error.message || 'Error desconocido';
+      result.failedEndpoint = error.endpoint || null;
+    }
+    return reply(200, result);
   }
 
   // Diagnóstico temporal: nunca devuelve el valor del secreto, solo su presencia y longitud.
