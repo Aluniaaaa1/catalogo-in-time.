@@ -83,6 +83,18 @@ export default async (request) => {
     catch { return reply(400, { error: 'Solicitud JSON no válida.' }); }
   }
 
+  // Diagnóstico temporal: nunca devuelve el valor del secreto, solo su presencia y longitud.
+  if (method === 'GET' && path.endsWith('/diagnostic')) {
+    const secret = process.env.SESSION_SECRET || '';
+    return reply(200, {
+      context: process.env.CONTEXT || 'sin CONTEXT',
+      sessionSecretPresent: Boolean(secret),
+      sessionSecretLength: secret.length,
+      sessionSecretValid: secret.length >= 32,
+      adminPasswordPresent: Boolean(process.env.ADMIN_PASSWORD)
+    });
+  }
+
   if (method === 'POST' && path.endsWith('/login')) {
     if (String(body.username || '') !== 'admin' || !process.env.ADMIN_PASSWORD || String(body.password || '') !== process.env.ADMIN_PASSWORD)
       return reply(401, { error: 'Usuario o contraseña incorrectos.' });
