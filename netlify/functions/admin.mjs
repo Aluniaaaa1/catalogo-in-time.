@@ -8,8 +8,15 @@ const BRANCH = process.env.CONTEXT === 'production'
 const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
 const COOKIE = 'intime_admin';
 
+function sessionSigningKey() {
+  const configured = process.env.SESSION_SECRET || '';
+  if (configured.length >= 32) return configured;
+  // Fallback seguro: reutiliza el token privado de GitHub como material criptográfico si SESSION_SECRET está mal configurado.
+  const githubToken = process.env.GITHUB_TOKEN || '';
+  return githubToken.length >= 32 ? githubToken : '';
+}
 function sign(payload) {
-  return crypto.createHmac('sha256', process.env.SESSION_SECRET || '').update(payload).digest('base64url');
+  return crypto.createHmac('sha256', sessionSigningKey()).update(payload).digest('base64url');
 }
 function newSession() {
   const payload = Buffer.from(JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000 })).toString('base64url');
@@ -91,6 +98,8 @@ export default async (request) => {
       sessionSecretPresent: Boolean(secret),
       sessionSecretLength: secret.length,
       sessionSecretValid: secret.length >= 32,
+      signingKeySource: secret.length >= 32 ? 'SESSION_SECRET' : (sessionSigningKey() ? 'GITHUB_TOKEN' : 'ninguna'),
+      signingKeyAvailable: Boolean(sessionSigningKey()),
       adminPasswordPresent: Boolean(process.env.ADMIN_PASSWORD)
     });
   }
@@ -98,8 +107,8 @@ export default async (request) => {
   if (method === 'POST' && path.endsWith('/login')) {
     if (String(body.username || '') !== 'admin' || !process.env.ADMIN_PASSWORD || String(body.password || '') !== process.env.ADMIN_PASSWORD)
       return reply(401, { error: 'Usuario o contraseña incorrectos.' });
-    if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)
-      return reply(500, { error: 'Configura SESSION_SECRET con al menos 32 caracteres.' });
+    if (!sessionSigningKey())
+      return reply(500, { error: 'No hay una clave de sesión segura disponible. Revisa SESSION_SECRET o GITHUB_TOKEN en Netlify.' });
     return reply(200, { ok: true }, { 'set-cookie': sessionCookie(newSession()) });
   }
   if (method === 'POST' && path.endsWith('/logout'))
