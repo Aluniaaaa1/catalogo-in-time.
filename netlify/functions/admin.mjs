@@ -56,7 +56,7 @@ async function readProducts() {
     throw new Error('GitHub no pudo devolver el contenido de products.js.');
   }
   const source = Buffer.from(blob.content.replace(/\\n/g, ''), 'base64').toString('utf8');
-  const match = source.match(/window\\.IN_TIME_PRODUCTS\\s*=\\s*(\\[[\\s\\S]*\\])\\s*;?\\s*$/);
+  const match = source.match(/window\.IN_TIME_PRODUCTS\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
   if (!match) throw new Error('No se reconoce el formato de products.js.');
   return JSON.parse(match[1]);
 }
