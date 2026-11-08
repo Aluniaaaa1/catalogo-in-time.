@@ -68,7 +68,7 @@ async function commitFiles(files, message) {
 }
 function productsSource(products) { return `window.IN_TIME_PRODUCTS = ${JSON.stringify(products)};\n`; }
 
-export default async (event) => {
+export const handler = async (event) => {
   const method = event.httpMethod;
   let body = {};
   try { body = event.body ? JSON.parse(event.body) : {}; } catch { return reply(400, { error: 'Solicitud JSON no válida.' }); }
