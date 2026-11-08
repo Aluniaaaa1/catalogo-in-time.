@@ -45,10 +45,12 @@ async function currentHead() {
   return ref.object.sha;
 }
 async function readProducts() {
-  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/products.js`;
-  const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } });
-  if (!res.ok) throw new Error('No se pudo leer products.js desde GitHub.');
-  const source = await res.text();
+  // El repositorio es privado: leer el archivo mediante la API autenticada de GitHub.
+  const file = await gh(`/contents/products.js?ref=${encodeURIComponent(BRANCH)}`);
+  if (!file.content || file.encoding !== 'base64') {
+    throw new Error('GitHub no devolvió el contenido de products.js. Comprueba el acceso del token y el tamaño del archivo.');
+  }
+  const source = Buffer.from(file.content.replace(/\\n/g, ''), 'base64').toString('utf8');
   const match = source.match(/window\.IN_TIME_PRODUCTS\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
   if (!match) throw new Error('No se reconoce el formato de products.js.');
   return JSON.parse(match[1]);
