@@ -456,18 +456,49 @@ function openProductModal(p){
  const features=$('#product-modal-features');features.replaceChildren();
  const featureList=Array.isArray(p.features)&&p.features.length?p.features:['Información técnica pendiente de incorporar.'];
  featureList.forEach(t=>{const li=document.createElement('li');li.textContent=t;features.append(li)});
- const variants=Array.isArray(p.colors)&&p.colors.length?p.colors:null;
- // galleryImages is an editorial product gallery, independent from color/size selection.
+ const variants=Array.isArray(p.colors)&&p.colors.length?p.colors.map(c=>typeof c==='string'?{name:c}:c):null;
  const independentGallery=Array.isArray(p.galleryImages)&&p.galleryImages.length>0;
- const colorPhotos=variants?variants.map(v=>v.image):(Array.isArray(p.images)&&p.images.length?p.images:[p.img]); const photos=independentGallery?[...p.galleryImages,...colorPhotos]:colorPhotos;
+ const colorPhotos=variants?variants.map(v=>v.image||''):(Array.isArray(p.images)&&p.images.length?p.images:[p.img||'']);
+ const photos=independentGallery?[...p.galleryImages,...colorPhotos]:colorPhotos;
  const photoLabels=Array.isArray(p.galleryImagesLabels)?p.galleryImagesLabels:[];
- main.src=photos[0];main.alt=p.name+(independentGallery?' · '+(photoLabels[0]||'fotografía 1'):(variants?' - '+variants[0].name:''));thumbs.replaceChildren();
+ thumbs.replaceChildren();
  const isGildanShort=(p.brand||'').toLowerCase()==='gildan'&&p.cat==='Camiseta Manga Corta';
- const usable=[];
- photos.forEach((src,i)=>{const isEditorialPhoto=independentGallery&&i<p.galleryImages.length;const colorIndex=independentGallery?i-p.galleryImages.length:i;const b=document.createElement('button');b.type='button';b.className=(i===0?'active ':'')+((variants&&!isEditorialPhoto)?'color-thumb':'');const photoLabel=isEditorialPhoto?(photoLabels[i]||('fotografía '+(i+1))):(variants?variants[colorIndex].name:('fotografía '+(i+1)));b.setAttribute('aria-label',(variants&&!isEditorialPhoto)?'Ver color '+variants[colorIndex].name:'Ver '+photoLabel);const im=document.createElement('img');im.referrerPolicy='no-referrer';im.src=src;im.alt=p.name+((variants&&!isEditorialPhoto)?' color '+variants[colorIndex].name:' · '+photoLabel);im.loading='lazy';
- if(isGildanShort){im.addEventListener('error',()=>{b.remove();const first=thumbs.querySelector('button');if(first){first.classList.add('active');const firstImg=first.querySelector('img');main.src=firstImg.src;main.alt=firstImg.alt}else{main.removeAttribute('src');main.alt='No hay fotografías disponibles'}})}
- b.append(im);if(variants&&!isEditorialPhoto){const nm=document.createElement('span');nm.className='color-name';nm.textContent=variants[colorIndex].name;b.append(nm)}b.addEventListener('click',()=>{const nextColor=(variants&&!isEditorialPhoto)?variants[colorIndex].name:null;if(nextColor && window.__IN_TIME_COLOR_LOCK__ && nextColor!==window.__IN_TIME_COLOR_LOCK__){$('cfg-feedback').textContent='Primero pulsa ACEPTAR IMPRESIÓN Y GUARDAR ESTE COLOR. Después podrás cambiar de color.';return}main.src=src;main.alt=p.name+((!independentGallery&&variants)?' - '+variants[i].name:' · '+photoLabel);thumbs.querySelectorAll('button').forEach((x)=>x.classList.toggle('active',x===b));if(nextColor){$('cfg-color').value=nextColor;$('cfg-color-status').textContent='Color seleccionado desde la fotografía: '+nextColor;window.__IN_TIME_ACTIVE_COLOR__=nextColor;loadBatchByColor(nextColor)}});thumbs.append(b);usable.push({src,b,im})});
- if(isGildanShort){main.addEventListener('error',()=>{const first=[...thumbs.querySelectorAll('button')].find(b=>b.querySelector('img')?.complete&&b.querySelector('img').naturalWidth>0);if(first){const im=first.querySelector('img');main.src=im.src;main.alt=im.alt}else{main.removeAttribute('src');main.alt='No hay fotografías disponibles'}})}
+ const firstPhoto=photos.find(Boolean)||p.img||'';
+ main.onerror=()=>{main.onerror=null;if(p.img&&main.src!==p.img)main.src=p.img;else{main.removeAttribute('src');main.alt='Fotografía no disponible'}};
+ main.src=firstPhoto;main.alt=p.name+(variants?' - '+(variants[0]?.name||'Color'):'');
+ photos.forEach((src,i)=>{
+   const editorial=independentGallery&&i<p.galleryImages.length;
+   const colorIndex=independentGallery?i-p.galleryImages.length:i;
+   const color=(!editorial&&variants)?variants[colorIndex]:null;
+   const label=editorial?(photoLabels[i]||('Fotografía '+(i+1))):(color?.name||('Fotografía '+(i+1)));
+   const b=document.createElement('button');b.type='button';
+   b.className=(i===0?'active ':'')+(color?'color-thumb':'');
+   b.setAttribute('aria-label',color?'Ver color '+label:'Ver '+label);
+   const im=document.createElement('img');im.referrerPolicy='no-referrer';im.src=src||'';
+   im.alt=p.name+(color?' color '+label:' · '+label);im.loading='eager';im.decoding='async';
+   im.addEventListener('error',()=>{
+     im.hidden=true;b.classList.add('image-unavailable');
+     let fallback=b.querySelector('.color-image-fallback');
+     if(!fallback){fallback=document.createElement('span');fallback.className='color-image-fallback';fallback.textContent='Imagen no disponible';b.insertBefore(fallback,b.firstChild)}
+   },{once:true});
+   b.append(im);
+   if(color){const nm=document.createElement('span');nm.className='color-name';nm.textContent=label;b.append(nm)}
+   b.addEventListener('click',()=>{
+     if(color&&window.__IN_TIME_COLOR_LOCK__&&color.name!==window.__IN_TIME_COLOR_LOCK__){
+       $('#cfg-feedback').textContent='Primero pulsa ACEPTAR IMPRESIÓN Y GUARDAR ESTE COLOR. Después podrás cambiarlo.';return;
+     }
+     if(src){main.onerror=null;main.src=src;main.alt=p.name+' - '+label}
+     thumbs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));
+     if(color){
+       const selector=$('#cfg-color');
+       if(selector&&[...selector.options].some(o=>o.value===color.name))selector.value=color.name;
+       const status=$('#cfg-color-status');if(status)status.textContent='Color seleccionado desde la fotografía: '+color.name;
+       window.__IN_TIME_ACTIVE_COLOR__=color.name;
+       if(typeof loadBatchByColor==='function')loadBatchByColor(color.name);
+     }
+   });
+   thumbs.append(b);
+ });
  modal.classList.add('show');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
 }
 function closeProductModal(){const modal=$('#product-modal');modal.classList.remove('show');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
